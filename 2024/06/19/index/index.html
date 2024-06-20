@@ -1,0 +1,90 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5"><title>Zero Deng</title><meta name="author" content="Zero Deng"><link rel="shortcut icon" href="/img/favicon.png"><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.13.0/css/all.min.css"><meta name="generator" content="Hexo 7.2.0"></head><body><header id="page_header"><div class="header_wrap"><div id="blog_name"><a class="blog_title" id="site-name" href="/">Zero Deng</a></div><button class="menus_icon"><div class="navicon"></div></button><ul class="menus_items"><li class="menus_item"><a class="site-page" href="/About"> About</a></li><li class="menus_item"><a class="site-page" href="/Publications"> Publications</a></li><li class="menus_item"><a class="site-page" href="/Data"> Code &amp; Data</a></li></ul></div></header><main id="page_main"><div class="side-card sticky"><div class="card-wrap" itemscope itemtype="http://schema.org/Person"><div class="author-avatar"><img class="avatar-img" src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/profile.png'" alt="avatar"></div><div class="author-discrip"><h3>Zero Deng</h3><div class="author-title">Ph.D., CPA</div><p class="author-bio">Accounting Educator and Researcher</p></div><div class="author-links"><button class="btn m-social-links">Links</button><ul class="social-icons"><li><a class="social-icon" href="mailto:junfang.deng@oregonstate.edu" target="_blank"><i class="fas fa-envelope" aria-hidden="true"></i></a></li></ul><ul class="social-links"><li><a class="e-social-link" href="https://scholar.google.com/citations?user=wZJ2gE8AAAAJ&amp;hl=en" target="_blank"><i class="fas fa-graduation-cap" aria-hidden="true"></i><span>Google Scholar</span></a></li><li><a class="e-social-link" href="https://orcid.org/0000-0001-7539-0638" target="_blank"><i class="fab fa-orcid" aria-hidden="true"></i><span>ORCID</span></a></li></ul></div></div></div><div class="page" itemscope itemtype="http://schema.org/CreativeWork"><h2 class="page-title">Home</h2><article><h3 id="Welcome-to-Zero’s-website-Here-you-can-learn-more-about-him-and-his-work"><a href="#Welcome-to-Zero’s-website-Here-you-can-learn-more-about-him-and-his-work" class="headerlink" title="Welcome to Zero’s website! Here, you can learn more about him and his work."></a>Welcome to Zero’s website! Here, you can learn more about him and his work.</h3><div>
+    <strong>His local time (Pacific) is</strong>:
+    <span id="datetime-text"></span>
+</div>
+
+
+<p><strong>What is Zero up to?</strong></p>
+<p><i id="custom-text"></i></p>
+<script>
+function refreshTime() {
+  let customTextDiv = document.getElementById("custom-text");
+  let datetimeTextDiv = document.getElementById("datetime-text");
+  const showingDate = new Date().toLocaleString("en-US", {
+        timeZone: "America/Los_Angeles",
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+  })
+  const fixedDate = new Date().toLocaleString("en-US", {
+    timeZone: "America/Los_Angeles",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const datetimeText = showingDate;
+  const [specificHour, specificMinute] = fixedDate.split(":").map(Number);
+  const currentDaytime = `${specificHour}:${specificMinute}`;
+  let displayText = "";
+  function isTimeInRange(checkTime, startTime, endTime) {
+    const [checkHour, checkMinute] = checkTime.split(":").map(Number);
+    const [startHour, startMinute] = startTime.split(":").map(Number);
+    const [endHour, endMinute] = endTime.split(":").map(Number);
+    const checkTotalMinutes = checkHour * 60 + checkMinute;
+    const startTotalMinutes = startHour * 60 + startMinute;
+    const endTotalMinutes = endHour * 60 + endMinute;
+    if (startTotalMinutes <= endTotalMinutes) {
+      return (
+        checkTotalMinutes >= startTotalMinutes &&
+        checkTotalMinutes <= endTotalMinutes
+      );
+    } else {
+      return (
+        checkTotalMinutes >= startTotalMinutes ||
+        checkTotalMinutes <= endTotalMinutes
+      );
+    }
+  }
+  if (isTimeInRange(currentDaytime, "07:01", "08:00")) {
+    displayText = "He is eating a hearty breakfast.";
+  } else if (isTimeInRange(currentDaytime, "08:01", "12:00")) {
+    displayText =
+      "He is diligently working. Sometimes he is teaching, other times he is doing research in his cave.";
+  } else if (isTimeInRange(currentDaytime, "12:01", "13:00")) {
+    displayText =
+      "He is eating a low-carb meal and debating whether to drink Dr. Pepper.";
+  } else if (isTimeInRange(currentDaytime, "13:01", "16:00")) {
+    displayText =
+      "He is diligently working. Sometimes he is teaching, other times he is doing research in his cave.";
+  } else if (isTimeInRange(currentDaytime, "16:01", "18:00")) {
+    displayText = "He is tangling with his kids.";
+  } else if (isTimeInRange(currentDaytime, "18:01", "19:00")) {
+    displayText = "He is pouring a glass of wine.";
+  } else if (isTimeInRange(currentDaytime, "19:01", "20:00")) {
+    displayText = "He is resting.";
+  } else if (isTimeInRange(currentDaytime, "20:01", "21:00")) {
+    displayText = "He is enjoying a fine cigar."
+  }
+  else if (isTimeInRange(currentDaytime, "21:01", "22:00")) {
+    displayText = "He is enjoying a movie.";
+  } else if (isTimeInRange(currentDaytime, "22:01", "07:00")) {
+    displayText = "He is sleeping.";
+  } else {
+    displayText = "He is in meditation.";
+  }
+  customTextDiv.innerHTML = displayText;
+  datetimeTextDiv.innerHTML = datetimeText;
+}
+refreshTime()
+setInterval(refreshTime, 1000); // refresh every min
+</script>
+
+<style>
+#datetime-text {
+    white-space: nowrap;
+}
+</style></article></div></main><div class="nav-wrap"><div class="nav"><button class="site-nav"><div class="navicon"></div></button><ul class="nav_items"><li class="nav_item"><a class="nav-page" href="/About"> About</a></li><li class="nav_item"><a class="nav-page" href="/Publications"> Publications</a></li><li class="nav_item"><a class="nav-page" href="/Data"> Code &amp; Data</a></li></ul></div><div class="cd-top"><i class="fa fa-arrow-up" aria-hidden="true"></i></div></div><footer id="page_footer"><div class="footer_wrap"><div class="copyright">&copy;2020 - 2024 by Zero Deng</div></div></footer><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/jquery-pjax@latest/jquery.pjax.min.js"></script><script src="/js/main.js"></script></body></html>
