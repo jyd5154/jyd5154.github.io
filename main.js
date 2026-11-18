@@ -310,6 +310,59 @@ bezel.position.set(0, 0.45, 0);
 bezel.castShadow = true;
 bezel.receiveShadow = true;
 monitor.add(bezel);
+// graffiti on the two sides of the monitor's body: "Stan" on the left, "Always" on the right
+const graffitiTex = (word, colors, outline, seed) => canvasTex(800, 480, (g) => {
+  let sd = seed;
+  const rr = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+  g.clearRect(0, 0, 800, 480);
+  g.lineJoin = 'round'; g.lineCap = 'round';
+  g.save();
+  g.translate(400, 235);
+  g.rotate(-0.07);
+  g.transform(1, 0, -0.22, 1, 0, 0); // leaning, as if sprayed in a hurry
+  let size = 250;
+  g.font = 'italic 900 ' + size + 'px Impact, "Arial Black", sans-serif';
+  while (size > 60 && g.measureText(word).width > 600) { size -= 6; g.font = 'italic 900 ' + size + 'px Impact, "Arial Black", sans-serif'; }
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  const grad = g.createLinearGradient(0, -size / 2, 0, size / 2);
+  grad.addColorStop(0, colors[0]); grad.addColorStop(0.55, colors[1]); grad.addColorStop(1, colors[2]);
+  g.fillStyle = 'rgba(0,0,0,0.45)'; g.strokeStyle = 'rgba(0,0,0,0.45)'; g.lineWidth = 46; // a shadow thrown to one side
+  g.strokeText(word, 14, 16); g.fillText(word, 14, 16);
+  g.strokeStyle = '#0b0b10'; g.lineWidth = 46; g.strokeText(word, 0, 0); // fat black outline
+  g.strokeStyle = outline; g.lineWidth = 26; g.strokeText(word, 0, 0); // a bright second outline
+  g.fillStyle = grad; g.fillText(word, 0, 0); // the colour fill
+  g.strokeStyle = 'rgba(235,225,200,0.3)'; g.lineWidth = 4; g.strokeText(word, -5, -6); // a faint highlight
+  // drips running down from the letters
+  const w = g.measureText(word).width;
+  for (let i = 0; i < 6; i++) {
+    const dx = -w / 2 + 40 + rr() * (w - 80), len = 30 + rr() * 70, wd = 7 + rr() * 5;
+    g.fillStyle = colors[2];
+    g.beginPath(); g.moveTo(dx - wd / 2, size * 0.3); g.lineTo(dx - wd / 2, size * 0.3 + len); g.arc(dx, size * 0.3 + len, wd / 2, Math.PI, 0, true); g.lineTo(dx + wd / 2, size * 0.3); g.closePath(); g.fill();
+  }
+  // a swoosh underline
+  g.strokeStyle = '#0b0b10'; g.lineWidth = 16; g.beginPath(); g.moveTo(-w / 2, size * 0.62); g.quadraticCurveTo(0, size * 0.78, w / 2, size * 0.58); g.stroke();
+  g.strokeStyle = outline; g.lineWidth = 8; g.beginPath(); g.moveTo(-w / 2, size * 0.62); g.quadraticCurveTo(0, size * 0.78, w / 2, size * 0.58); g.stroke();
+  g.restore();
+  // sparkles and spray-paint speckles around it
+  const star = (x, y, r, col) => { g.fillStyle = col; g.beginPath(); for (let i = 0; i < 8; i++) { const a = (i * Math.PI) / 4, rad = i % 2 ? r * 0.28 : r; g.lineTo(x + Math.cos(a) * rad, y + Math.sin(a) * rad); } g.closePath(); g.fill(); };
+  star(95, 70, 30, '#d8cdb0'); star(715, 410, 24, '#d8cdb0'); star(690, 75, 18, outline);
+  for (let i = 0; i < 90; i++) { g.fillStyle = [colors[0], colors[1], colors[2], outline][i % 4]; g.globalAlpha = 0.35 + rr() * 0.5; g.beginPath(); g.arc(rr() * 800, rr() * 480, 1 + rr() * 3.2, 0, 7); g.fill(); }
+  g.globalAlpha = 1;
+  g.globalCompositeOperation = 'source-atop'; // yellowed, dusty tint over all the paint
+  g.fillStyle = 'rgba(96,74,40,0.18)'; g.fillRect(0, 0, 800, 480);
+  g.globalCompositeOperation = 'destination-out'; // paint worn away: flecks, blotches and scratches
+  for (let i = 0; i < 380; i++) { g.fillStyle = 'rgba(0,0,0,' + (0.12 + rr() * 0.4) + ')'; g.fillRect(rr() * 800, rr() * 480, 1 + rr() * 4, 1 + rr() * 3); }
+  for (let i = 0; i < 14; i++) { g.strokeStyle = 'rgba(0,0,0,' + (0.3 + rr() * 0.4) + ')'; g.lineWidth = 1 + rr() * 2; g.beginPath(); const x0 = rr() * 800, y0 = rr() * 480; g.moveTo(x0, y0); g.lineTo(x0 + (rr() - 0.5) * 160, y0 + (rr() - 0.5) * 60); g.stroke(); }
+  g.globalCompositeOperation = 'source-over';
+}, 1, 1);
+const sideTilt = Math.atan2(0.134, 0.34); // how much the monitor body narrows from front to back
+[['Stan', -1, ['#c4573f', '#d08a3e', '#dfc070'], '#5a9298', 11], ['Always', 1, ['#4f98a2', '#7d70a8', '#b5688f'], '#a8b46a', 23]].forEach(([word, side, colors, outline, seed]) => {
+  const label = new THREE.Mesh(new THREE.PlaneGeometry(0.36, 0.216), new THREE.MeshStandardMaterial({ map: graffitiTex(word, colors, outline, seed), transparent: true, roughness: 0.85, color: 0xd2cabd, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+  const half = 0.2295 + 0.003; // the side wall's distance from the middle, halfway along the body
+  label.position.set(side * (half + 0.0006), 0.45, -0.23);
+  label.rotation.y = side > 0 ? Math.PI - (Math.PI / 2 - sideTilt) - 0 : -(Math.PI - (Math.PI / 2 - sideTilt));
+  monitor.add(label);
+});
 
 // tapered rear housing (a square frustum, like the glass tube behind it)
 const housingGeo = new THREE.CylinderGeometry(0.23, 0.42, 0.34, 4, 1, false, Math.PI / 4);
@@ -2641,7 +2694,7 @@ function loadCdMusic() {
   if (cdMusicLoading) return cdMusicLoading;
   cdMusicLoading = new Promise((resolve) => {
     const box = document.createElement('div'); // YouTube asks that its player stays visible, so it is a small "now playing" window
-    box.style.cssText = 'position:fixed;right:16px;bottom:56px;width:280px;height:158px;z-index:5;display:none;border-radius:6px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.6);background:#000;';
+    box.style.cssText = 'position:fixed;right:16px;bottom:56px;width:200px;height:113px;z-index:5;display:none;border-radius:6px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.6);background:#000;';
     const holder = document.createElement('div');
     box.appendChild(holder);
     document.body.appendChild(box);
@@ -2654,7 +2707,7 @@ function loadCdMusic() {
     const make = () => {
       try {
         ytPlayer = new YT.Player(holder, {
-          host: 'https://www.youtube-nocookie.com', width: 280, height: 158, videoId: YT_VIDEO,
+          host: 'https://www.youtube-nocookie.com', width: 200, height: 113, videoId: YT_VIDEO,
           playerVars: { controls: 1, rel: 0, playsinline: 1, loop: 1, playlist: YT_VIDEO },
           events: { onReady: () => { cdMusic = adapter; resolve(adapter); }, onError: () => resolve(null) },
         });

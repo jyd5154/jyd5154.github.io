@@ -163,7 +163,7 @@ export class RetroOS {
       win = id === 'secret'
         ? { id, title: def.title, x: 330 + n * 12, y: 80 + n * 12, w: 360, h: 560, scroll: 0, layout: null }
         : GAME_IDS.includes(id)
-          ? { id, title: def.title, x: 250 + n * 22, y: 40 + n * 22, w: 432, h: 494, scroll: 0, layout: null, game: createGame(id) }
+          ? { id, title: def.title, x: 214 + n * 20, y: 6 + (n % 3) * 6, w: 632, h: 716, scroll: 0, layout: null, game: createGame(id) }
           : { id, title: def.title, x: 230 + n * 22, y: 30 + n * 22, w: 720, h: 640, scroll: 0, layout: null };
       this.windows.push(win);
     } else {
@@ -358,33 +358,31 @@ export class RetroOS {
     const ctx = this.ctx;
     const { x, y, w, h } = win;
     const game = win.game;
+    const SC = 1.5; // the games run on a 400 x 400 playfield, shown one and a half times bigger
+    const PF = 400 * SC;
     const cx = x + 6, cy = y + 34;
     ctx.fillStyle = '#c0c0c0';
     ctx.fillRect(cx, cy, w - 12, h - 40);
     const [left, right] = game.hud(); // score strip
-    bevel(ctx, cx + 10, cy + 8, 400, 30, true, '#101418');
+    bevel(ctx, cx + 10, cy + 8, PF, 32, true, '#101418');
     ctx.textBaseline = 'middle';
-    ctx.font = `bold 15px ${FONT}`; ctx.fillStyle = '#8cff9c'; ctx.textAlign = 'left';
-    ctx.fillText(left, cx + 20, cy + 24);
-    ctx.font = `12px ${FONT}`; ctx.fillStyle = '#9fb0a8'; ctx.textAlign = 'right';
-    ctx.fillText(right, cx + 400, cy + 24);
+    ctx.font = `bold 18px ${FONT}`; ctx.fillStyle = '#8cff9c'; ctx.textAlign = 'left';
+    ctx.fillText(left, cx + 22, cy + 25);
+    ctx.font = `14px ${FONT}`; ctx.fillStyle = '#9fb0a8'; ctx.textAlign = 'right';
+    ctx.fillText(right, cx + 10 + PF - 12, cy + 25);
     ctx.textAlign = 'left';
-    const gx = cx + 10, gy = cy + 46; // the playfield
-    ctx.fillStyle = '#404040'; ctx.fillRect(gx - 2, gy - 2, 404, 2); ctx.fillRect(gx - 2, gy - 2, 2, 404);
-    ctx.fillStyle = '#fff'; ctx.fillRect(gx - 2, gy + 400, 404, 2); ctx.fillRect(gx + 400, gy - 2, 2, 404);
-    game.setPointer(this.pointer.x - gx, this.pointer.y - gy, this.pointer.visible);
+    const gx = cx + 10, gy = cy + 48; // the playfield
+    ctx.fillStyle = '#404040'; ctx.fillRect(gx - 2, gy - 2, PF + 4, 2); ctx.fillRect(gx - 2, gy - 2, 2, PF + 4);
+    ctx.fillStyle = '#fff'; ctx.fillRect(gx - 2, gy + PF, PF + 4, 2); ctx.fillRect(gx + PF, gy - 2, 2, PF + 4);
+    game.setPointer((this.pointer.x - gx) / SC, (this.pointer.y - gy) / SC, this.pointer.visible);
     ctx.save();
-    ctx.beginPath(); ctx.rect(gx, gy, 400, 400); ctx.clip();
-    game.draw(ctx, gx, gy);
+    ctx.beginPath(); ctx.rect(gx, gy, PF, PF); ctx.clip();
+    ctx.translate(gx, gy); ctx.scale(SC, SC);
+    game.draw(ctx, 0, 0);
     ctx.restore();
-    ctx.font = `12px ${FONT}`; ctx.fillStyle = '#404040'; ctx.textBaseline = 'middle';
-    ctx.fillText('Esc: step away from the desk', cx + 12, gy + 400 + 20);
-    this.hits.push({ x: gx, y: gy, w: 400, h: 400, id: 'game-' + win.id, win, onClick: () => game.click() });
-  }
-
-  keyUp(k) {
-    const top = this.windows[this.windows.length - 1];
-    if (top && top.game) top.game.keyUp(k);
+    ctx.font = `13px ${FONT}`; ctx.fillStyle = '#404040'; ctx.textBaseline = 'middle';
+    ctx.fillText('Esc: step away from the desk', cx + 12, gy + PF + 18);
+    this.hits.push({ x: gx, y: gy, w: PF, h: PF, id: 'game-' + win.id, win, onClick: () => game.click() });
   }
 
   drawSecret(win) {
