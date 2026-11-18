@@ -3146,10 +3146,11 @@ canvas.addEventListener('wheel', (e) => {
 canvas.addEventListener('pointerleave', () => { if (mode === 'focus') os.pointerLeave(); });
 
 // ---------- resize + loop ----------
+let useComposer = true; // false in the lighter mode (no glow post-processing)
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
   renderer.setSize(w, h, false);
-  composer.setSize(w, h);
+  if (useComposer) composer.setSize(w, h);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
 }
@@ -3498,9 +3499,56 @@ function frameLoop() {
     if (dustPos[i * 3 + 1] > 2.0) dustPos[i * 3 + 1] = 0.9;
   }
   dustGeo.attributes.position.needsUpdate = true;
-  bloom.strength = mode === 'focus' ? 0.1 : 0.32;
-  composer.render();
+  benchTick();
+  if (useComposer) { bloom.strength = mode === 'focus' ? 0.1 : 0.32; composer.render(); } else renderer.render(scene, camera);
   requestAnimationFrame(frameLoop);
+}
+
+// ---------- picking the display mode on the boot screen: FULL (glow, shadows) for strong devices, LITE for weaker ones ----------
+const QUALITY = { mode: 'full', decided: false };
+function applyQuality(q) {
+  QUALITY.mode = q;
+  QUALITY.decided = true;
+  if (q !== 'lite') return;
+  useComposer = false; // no glow pass
+  composer.dispose();
+  renderer.setPixelRatio(1); // standard sharpness, even on high-density screens
+  renderer.shadowMap.enabled = false; // no shadow passes
+  starMat.uniforms.uPR.value = 1;
+  disco.N = 110; disco.spots.count = 110; // fewer light spots in party mode
+  scene.traverse((o) => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => { m.needsUpdate = true; }); });
+  resize();
+}
+const bench = { active: false, samples: [], last: 0, skip: 24, resolve: null };
+const benchDone = new Promise((res) => { bench.resolve = res; });
+function finishBench(partial) { // decide from how fast the real scene drew in the first moments
+  if (!bench.active) return;
+  bench.active = false;
+  const s = bench.samples.slice().sort((a, b) => a - b);
+  if (s.length >= (partial ? 12 : 30)) applyQuality(s[Math.floor(s.length / 2)] > 28 ? 'lite' : 'full'); // slower than about 35 frames a second: lighter mode
+  else applyQuality('full');
+  bench.resolve();
+}
+function benchTick() {
+  if (!bench.active) return;
+  const now = performance.now();
+  if (document.hidden) { bench.samples.length = 0; bench.skip = 12; bench.last = 0; return; } // a background tab is not a fair test
+  if (bench.last) {
+    if (bench.skip > 0) bench.skip--; // the first frames include shader compiling
+    else { bench.samples.push(now - bench.last); if (bench.samples.length >= 60) finishBench(false); }
+  }
+  bench.last = now;
+}
+{
+  const override = new URLSearchParams(location.search).get('quality'); // ?quality=lite or ?quality=full, for testing
+  let renderer_name = '';
+  try { const gl = renderer.getContext(); const ext = gl.getExtension('WEBGL_debug_renderer_info'); if (ext) renderer_name = String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)); } catch (err) { /* unknown graphics chip */ }
+  const software = /swiftshader|llvmpipe|software|basic render/i.test(renderer_name);
+  const phone = window.matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) <= 820;
+  const weak = (navigator.hardwareConcurrency || 8) <= 2 || (navigator.deviceMemory || 8) <= 2;
+  if (override === 'lite' || override === 'full') { applyQuality(override); bench.resolve(); }
+  else if (software || phone || weak) { applyQuality('lite'); bench.resolve(); } // clearly a lighter device: no test needed
+  else bench.active = true; // otherwise watch how smoothly the first frames draw
 }
 
 // ---------- boot sequence then start ----------
@@ -3512,7 +3560,21 @@ bootEl.style.color = BOOT.textColor;
 startBtn.textContent = BOOT.startLabel;
 bootEl.style.setProperty('--btn', BOOT.buttonColor); // keeps the white hover colour working
 let li = 0;
+// the graphics check is printed just before the line that starts "All content loaded" (or at the end if there is no such line)
+const gfxAt = (() => { const i = lines.findIndex((l) => /^all content loaded/i.test(l)); return i < 0 ? lines.length : i; })();
+let gfxShown = false;
+function showGraphicsCheck(then) {
+  bootLog.textContent += 'Checking your graphics...\n';
+  Promise.race([benchDone, new Promise((r) => setTimeout(r, 6000))]).then(() => {
+    if (!QUALITY.decided) finishBench(true); // the test is still running: decide with what we have
+    if (!QUALITY.decided) applyQuality('full');
+    bootLog.textContent += QUALITY.mode === 'lite' ? 'Display mode: LITE (lighter, for smoother play)\n' : 'Display mode: FULL\n';
+    gfxShown = true;
+    then();
+  });
+}
 (function typeNext() {
+  if (!gfxShown && li >= gfxAt) { showGraphicsCheck(() => setTimeout(typeNext, BOOT.lineDelayMs)); return; }
   if (li < lines.length) {
     bootLog.textContent += lines[li++] + '\n';
     setTimeout(typeNext, BOOT.lineDelayMs);
